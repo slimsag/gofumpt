@@ -97,6 +97,7 @@ func File(fset *token.FileSet, file *ast.File, opts Options) {
 		return true
 	}
 	post := func(c *astutil.Cursor) bool {
+		f.applyPost(c)
 		switch c.Node().(type) {
 		case *ast.FieldList:
 			f.longLineExtra = 0
@@ -270,7 +271,6 @@ func (f *fumpter) lineEnd(line int) token.Pos {
 //   //nolint     | nolint directive for golangci
 var rxCommentDirective = regexp.MustCompile(`^([a-z]+:|line\b|export\b|extern\b|sys(nb)?\b|nolint\b)`)
 
-// visit takes either an ast.Node or a []ast.Stmt.
 func (f *fumpter) applyPre(c *astutil.Cursor) {
 	f.splitLongLine(c)
 
@@ -452,6 +452,51 @@ func (f *fumpter) applyPre(c *astutil.Cursor) {
 		}
 		f.removeLinesBetween(bodyEnd, node.Rbrace)
 
+	case *ast.CaseClause:
+		f.stmts(node.Body)
+		openLine := f.Line(node.Case)
+		closeLine := f.Line(node.Colon)
+		if openLine == closeLine {
+			// nothing to do
+			break
+		}
+		if len(f.commentsBetween(node.Case, node.Colon)) > 0 {
+			// don't move comments
+			break
+		}
+		if f.printLength(node) > shortLineLimit {
+			// too long to collapse
+			break
+		}
+		f.removeLines(openLine, closeLine)
+
+	case *ast.CommClause:
+		f.stmts(node.Body)
+
+	case *ast.FieldList:
+		switch c.Parent().(type) {
+		case *ast.FuncDecl, *ast.FuncType, *ast.InterfaceType:
+			node.List = f.mergeAdjacentFields(node.List)
+			c.Replace(node)
+		case *ast.StructType:
+			// Do not merge adjacent fields in structs.
+		}
+
+	case *ast.BasicLit:
+		if semver.Compare(f.goVersion, "v1.13") >= 0 {
+			if node.Kind == token.INT && rxOctalInteger.MatchString(node.Value) {
+				node.Value = "0o" + node.Value[1:]
+				c.Replace(node)
+			}
+		}
+	}
+}
+
+func (f *fumpter) applyPost(c *astutil.Cursor) {
+	switch node := c.Node().(type) {
+	// Adding newlines to composite literals happens as a "post" step, so
+	// that we can take into account whether "pre" steps added any newlines
+	// that would affect us here.
 	case *ast.CompositeLit:
 		if len(node.Elts) == 0 {
 			// doesn't have elements
@@ -516,6 +561,7 @@ func (f *fumpter) applyPre(c *astutil.Cursor) {
 				f.addNewline(elem1.End())
 			}
 		}
+<<<<<<< HEAD
 
 	case *ast.CaseClause:
 		f.stmts(node.Body)
@@ -559,6 +605,8 @@ func (f *fumpter) applyPre(c *astutil.Cursor) {
 				c.Replace(node)
 			}
 		}
+=======
+>>>>>>> 8be3105 (make "split long lines" idempotent)
 	}
 }
 

@@ -129,14 +129,9 @@ type fumpter struct {
 
 	astFile *ast.File
 
-<<<<<<< HEAD
-	blockLevel int
-=======
 	blockLevel    int
 	longLineExtra int
-
-	goVersion string
->>>>>>> 572ac90 (format: break long lines)
+	goVersion     string
 }
 
 func (f *fumpter) commentsBetween(p1, p2 token.Pos) []*ast.CommentGroup {
@@ -561,7 +556,6 @@ func (f *fumpter) applyPost(c *astutil.Cursor) {
 				f.addNewline(elem1.End())
 			}
 		}
-<<<<<<< HEAD
 
 	case *ast.CaseClause:
 		f.stmts(node.Body)
@@ -605,8 +599,6 @@ func (f *fumpter) applyPost(c *astutil.Cursor) {
 				c.Replace(node)
 			}
 		}
-=======
->>>>>>> 8be3105 (make "split long lines" idempotent)
 	}
 }
 
